@@ -30,6 +30,16 @@ class UserViewSet(viewsets.ModelViewSet):
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    @action(detail=True, url_path='is-already-vote')
+    def is_already_vote(self, request, pk=None):
+        question = self.get_object()
+        jwt_object = JWTAuthentication()
+        user, _ = jwt_object.authenticate(request)
+        if is_already_vote(question, user.id):
+            return Response({'is-already-vote': True})
+        return Response({'is-already-vote': False})
 
 
 class AnswerViewSet(viewsets.ModelViewSet):
