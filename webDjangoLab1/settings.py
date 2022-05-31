@@ -39,10 +39,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'pollings.apps.PollingsConfig',
     'rest_framework',
-    'rest_framework_simplejwt'
+    'rest_framework_simplejwt',
+    'corsheaders'
+]
+
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:8080"
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

@@ -23,10 +23,11 @@ class AnswerSerializer(serializers.ModelSerializer):
 
 class QuestionSerializer(serializers.ModelSerializer):
     answers = AnswerSerializer(many=True)
+    author_username = serializers.StringRelatedField(source='author')
 
     class Meta:
         model = Question
-        fields = ['id', 'author', 'question_text', 'pub_date', 'answers']
+        fields = ['id', 'author', 'author_username', 'question_text', 'pub_date', 'answers']
         read_only_fields = ['id', 'pub_date']
 
     def create(self, validated_data):
