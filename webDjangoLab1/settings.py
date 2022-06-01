@@ -15,7 +15,6 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
@@ -26,7 +25,6 @@ SECRET_KEY = 'django-insecure-r3)s^wx)ep!l$3543dc_$t)g+2n6e4hr&rapyw$xbfvc=tzo60
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -40,7 +38,8 @@ INSTALLED_APPS = [
     'pollings.apps.PollingsConfig',
     'rest_framework',
     'rest_framework_simplejwt',
-    'corsheaders'
+    'corsheaders',
+    'drf_spectacular',
 ]
 
 CORS_ORIGIN_WHITELIST = [
@@ -83,7 +82,20 @@ WSGI_APPLICATION = 'webDjangoLab1.wsgi.application'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Polling app project API',
+    'DESCRIPTION': 'It is API for polling app',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+}
+
+SPECTACULAR_DEFAULTS = {
+    'SCHEMA_PATH_PREFIX': '/api/v[0-9]',
 }
 
 # Database
@@ -95,7 +107,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -128,7 +139,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/

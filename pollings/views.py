@@ -1,12 +1,13 @@
 from django.contrib.auth.models import User
-from rest_framework import viewsets, status
+from django.http import Http404
+from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiResponse, inline_serializer, OpenApiExample
+from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated, IsAdminUser, AllowAny
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from pollings.models import Question, Answer
+from pollings.permissions import UserViewPermission, IsOwnerOrAdmin
 from pollings.serializers import UserSerializer, QuestionSerializer, AnswerSerializer
 
 
@@ -19,55 +20,144 @@ def is_already_vote(question, user_id):
 
 
 def you_have_already_vote_response():
-    return Response({'status': 'bad', 'message': 'You have already vote on this question'},
-                    status=status.HTTP_400_BAD_REQUEST)
+    return Response({'message': 'You have already vote on this question'},
+                    status=status.HTTP_403_FORBIDDEN)
 
 
-class RegisterView(APIView):
-
-    def post(self, request, format=None):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+@extend_schema_view(
+    list=extend_schema(
+        summary="Get list of users",
+        description="Only stuff can see all users",
+        tags=["User"]
+    ),
+    retrieve=extend_schema(
+        summary="Get user",
+        tags=["User"]
+    ),
+    destroy=extend_schema(
+        summary="Delete user",
+        tags=["User"]
+    ),
+    create=extend_schema(
+        summary="Register user",
+        tags=["User"]
+    ),
+    exists=extend_schema(
+        summary="Check user existence",
+        methods=["HEAD"],
+        tags=["User"]
+    )
+)
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [UserViewPermission]
     lookup_field = "username"
 
+    def exists(self, request, *args, **kwargs):
+        try:
+            _ret = self.retrieve(request, *args, **kwargs)
+            return Response(status=status.HTTP_200_OK)
+        except Http404 as e:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="Get list of questions",
+        tags=["Question"]
+    ),
+    retrieve=extend_schema(
+        summary="Get question",
+        tags=["Question"]
+    ),
+    destroy=extend_schema(
+        summary="Delete question",
+        tags=["Question"]
+    ),
+    create=extend_schema(
+        summary="Create question",
+        tags=["Question"]
+    ),
+    update=extend_schema(
+        exclude=True
+    ),
+    partial_update=extend_schema(
+        exclude=True
+    )
+)
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
 
+    @extend_schema(tags=["Question"],
+                   summary="Check whether you have already vote",
+                   responses={200: inline_serializer(
+                       name="IsAlreadyVoteAnswer",
+                       fields={
+                           'is-already-vote': serializers.BooleanField()
+                       }
+                   )})
     @action(detail=True, url_path='is-already-vote', permission_classes=[IsAuthenticated])
     def is_already_vote(self, request, pk=None):
+        """Check if the current user vote on question=id"""
         question = self.get_object()
-        jwt_object = JWTAuthentication()
-        user, _ = jwt_object.authenticate(request)
-        if is_already_vote(question, user.id):
+        if is_already_vote(question, request.user.id):
             return Response({'is-already-vote': True})
         return Response({'is-already-vote': False})
 
 
-class AnswerViewSet(viewsets.ModelViewSet):
+voteAnswerSerializer = inline_serializer(
+                       name="VoteAnswer",
+                       fields={
+                           'message': serializers.CharField()
+                       })
+
+
+@extend_schema_view(
+    list=extend_schema(
+        exclude=True
+    ),
+    retrieve=extend_schema(
+        summary="Get answer",
+        tags=["Answer"]
+    )
+)
+class AnswerViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Answer.objects.all()
     serializer_class = AnswerSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
 
-    @action(detail=True, methods=['patch'])
+    def list(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @extend_schema(tags=["Answer"],
+                   summary="Vote for answer",
+                   request=None,
+                   responses={200: voteAnswerSerializer, 403: voteAnswerSerializer}
+                   ,
+                   examples=[
+                       OpenApiExample(
+                           'Successful vote',
+                           value={'message': 'Thank you for your vote'}
+                       ),
+                       OpenApiExample(
+                           'You can\'t vote',
+                           value={'message': 'You have already vote on this question'}
+                           , status_codes=["403"]
+                       )
+                   ]
+                   )
+    @action(detail=True, methods=['patch'], permission_classes=[IsAuthenticated])
     def vote(self, request, question_pk=None, pk=None):
+        """
+        Votes for answer=id in question=question_pk
+        """
         answer = self.get_object()
         question = Question.objects.get(pk=question_pk)
-        jwt_object = JWTAuthentication()
-        user, _ = jwt_object.authenticate(request)
-        if is_already_vote(question, user.id):
+        if is_already_vote(question, request.user.id):
             return you_have_already_vote_response()
-        answer.voters.add(user.id)
+        answer.voters.add(request.user.id)
         answer.save()
-        return Response({'status': 'ok', 'message': 'Thank you for your vote'})
+        return Response({'message': 'Thank you for your vote'})
