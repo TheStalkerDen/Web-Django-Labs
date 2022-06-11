@@ -15,3 +15,4 @@ PyYAML==6.0
 sqlparse==0.4.2
 tzdata==2022.1
 uritemplate==4.1.1
+channels==3.0.4

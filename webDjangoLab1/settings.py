@@ -24,9 +24,9 @@ SECRET_KEY = 'django-insecure-r3)s^wx)ep!l$3543dc_$t)g+2n6e4hr&rapyw$xbfvc=tzo60
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
 # Application definition
+
+ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -40,11 +40,10 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'drf_spectacular',
+    'channels'
 ]
 
-CORS_ORIGIN_WHITELIST = [
-    "http://localhost:8080"
-]
+CORS_ORIGIN_ALLOW_ALL = True
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -78,6 +77,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'webDjangoLab1.wsgi.application'
+ASGI_APPLICATION = 'webDjangoLab1.asgi.application'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -105,6 +105,12 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
     }
 }
 
