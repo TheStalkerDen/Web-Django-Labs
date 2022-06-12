@@ -12,6 +12,8 @@ class PollingsConsumer(WebsocketConsumer):
 
     def connect(self):
         self.accept()
+        print(self.scope["user"])
+        print(self.channel_name)
         async_to_sync(self.channel_layer.group_add)(
             self.group_name,
             self.channel_name
@@ -29,17 +31,30 @@ class PollingsConsumer(WebsocketConsumer):
                     'sender_channel_name': self.channel_name
                 }
             )
-        if data["type"] == "deleted_question":
+        elif data["type"] == "deleted_question":
             async_to_sync(self.channel_layer.group_send)(
                 self.group_name,
                 {
                     "type": "deleted_question",
                     "message": data["message"],
-                    'sender_channel_name': self.channel_name
+                    'questionId': data["questionId"],
+                    'sender_channel_name': self.channel_name,
+                }
+            )
+        elif data["type"] == "vote_for_answer":
+            async_to_sync(self.channel_layer.group_send)(
+                self.group_name,
+                {
+                    "type": "vote_for_answer",
+                    "message": data["message"],
+                    'answerId': data["answerId"],
+                    'questionId': data["questionId"],
+                    'sender_channel_name': self.channel_name,
                 }
             )
 
     def disconnect(self, code):
+        print(self.scope["user"])
         async_to_sync(self.channel_layer.group_discard)(
             self.group_name,
             self.channel_name
@@ -50,5 +65,9 @@ class PollingsConsumer(WebsocketConsumer):
             self.send(text_data=json.dumps(event))
 
     def deleted_question(self, event):
+        if self.channel_name != event['sender_channel_name']:
+            self.send(text_data=json.dumps(event))
+
+    def vote_for_answer(self, event):
         if self.channel_name != event['sender_channel_name']:
             self.send(text_data=json.dumps(event))

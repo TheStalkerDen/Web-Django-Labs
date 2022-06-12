@@ -14,12 +14,13 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
 import pollings.routing
+from webDjangoLab1.channelsmiddleware import JwtAuthMiddleware
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'webDjangoLab1.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    'websocket': AuthMiddlewareStack(
+    'websocket': JwtAuthMiddleware(
         URLRouter(
             pollings.routing.websocket_urlpatterns
         )
