@@ -3,6 +3,7 @@ import json
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
+from pollings.tasks import send_email, calculate_all_votes, generate_report
 
 
 class PollingsConsumer(WebsocketConsumer):
@@ -10,8 +11,8 @@ class PollingsConsumer(WebsocketConsumer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
-        self.common_group_name = "common"
-        self.admin_group_name = "admin"
+        self.common_group_name = "common_group"
+        self.admin_group_name = "admin_group"
 
     def connect(self):
         self.accept()
@@ -75,6 +76,15 @@ class PollingsConsumer(WebsocketConsumer):
                     'sender_channel_name': self.channel_name,
                 }
             )
+        elif data["type"] == "start_task":
+            if data["task_type"] == "email_sending":
+                send_email.apply_async((self.online_users,), queue="email_queue")
+            elif data["task_type"] == "getAllVotes":
+                calculate_all_votes.apply_async(queue="long_time_task")
+            elif data["task_type"] == "generateReport":
+                generate_report.apply_async(queue="long_time_task")
+        else:
+            print(f"Unknown task: {data['type']}")
 
     def disconnect(self, code):
         user = self.scope["user"]
@@ -116,4 +126,7 @@ class PollingsConsumer(WebsocketConsumer):
         self.send(text_data=json.dumps(event))
 
     def user_disconnected(self, event):
+        self.send(text_data=json.dumps(event))
+
+    def completed_task(self, event):
         self.send(text_data=json.dumps(event))

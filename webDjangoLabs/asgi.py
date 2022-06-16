@@ -1,5 +1,5 @@
 """
-ASGI config for webDjangoLab1 project.
+ASGI config for webDjangoLabs project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -14,9 +14,9 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
 import pollings.routing
-from webDjangoLab1.channelsmiddleware import JwtAuthMiddleware
+from webDjangoLabs.channelsmiddleware import JwtAuthMiddleware
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'webDjangoLab1.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'webDjangoLabs.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
